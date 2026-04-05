@@ -4,9 +4,6 @@ on:
   push:
     tags: ['v*']
 
-permissions:
-  packages: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -19,4 +16,4 @@ jobs:
 
       - run: dotnet pack src/Ai.Cli/Ai.Cli.csproj -c Release -o ./out /p:Version=${GITHUB_REF_NAME#v}
 
-      - run: dotnet nuget push ./out/*.nupkg --source "https://nuget.pkg.github.com/tylerrichey/index.json" --api-key ${{ secrets.GITHUB_TOKEN }}
+      - run: dotnet nuget push ./out/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.NUGET_API_KEY }}
