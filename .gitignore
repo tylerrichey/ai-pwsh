@@ -1,6 +1,7 @@
 .appdata/
 .dotnet-home/
 .nuget/
+.worktrees/
 **/bin/
 **/obj/
 
