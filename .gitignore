@@ -4,6 +4,7 @@
 .worktrees/
 **/bin/
 **/obj/
+docs/
 
 .tmp-tests
 

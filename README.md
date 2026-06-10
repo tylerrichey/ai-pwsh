@@ -2,14 +2,32 @@
 
 `ai` is a .NET global tool that uses OpenRouter by default, or any OpenAI-compatible chat-completions endpoint you configure, to turn natural-language goals into shell commands or answer questions about your current workspace.
 
+It is cross-platform and targets your current shell — PowerShell, bash, or zsh — automatically.
+
+## Install
+
+Install the global tool from NuGet:
+
+```bash
+dotnet tool install --global Ai.Cli
+```
+
+Update to the latest published version:
+
+```bash
+dotnet tool update --global Ai.Cli
+```
+
+This puts the `ai` command on your PATH. It works the same on Windows, Linux, and macOS.
+
 ## Features
 
-- `ai <goal...>` generates a PowerShell command, prints it, copies it to the clipboard, and in PowerShell prompts for Enter-to-execute in the current session.
+- `ai <goal...>` generates a shell command for your current shell, displays it, and prompts for Enter-to-execute.
 - `ai -q <question...>` / `ai --question <question...>` prints a plain text answer instead of generating a command.
 - `ai -r <follow-up...>` / `ai --resume <follow-up...>` continues from the last history entry, sending the prior conversation as context for a multi-turn exchange.
 - `ai --bash <goal...>` generates a bash command body and prints it as `bash -lc "<command>"`.
 - `ai --shell <target> <goal...>` generates a command for the specified shell (`powershell`, `bash`, `zsh`).
-- `ai -x <goal...>` / `ai --execute <goal...>` generates a command, displays it, prompts for Enter-to-confirm, and runs it directly via the target shell. Works cross-platform without the PowerShell wrapper.
+- `ai -x <goal...>` / `ai --execute <goal...>` generates a command, displays it, prompts for Enter-to-confirm, and runs it directly via the target shell.
 - `ai -f <path> ...` / `ai --file <path> ...` includes up to 3 files as additional context for command generation or `-q` answers.
 - `ai -hs` / `ai --history` shows recent history (most recent 50 entries). Append search tokens to filter: `ai -hs <terms...>`. Resume entries are shown with the `resume` label.
 - `ai -nh` / `ai --no-history` skips recording the current invocation in history.
@@ -17,7 +35,6 @@
 - `ai --model <model-id> <goal...>` overrides the configured default model.
 - `ai --version` prints the built tool version.
 - `ai --timing <goal...>` prints timing information to stderr, including the AI call duration.
-- `ai.exe <goal...>` remains available as the raw generator without the PowerShell execution prompt.
 
 ## Configuration
 
@@ -55,88 +72,43 @@ Environment overrides:
 
 OpenRouter requires an API key. Local providers such as LM Studio may not. If no model can be resolved, `ai` exits with a setup error.
 
-## Build
-
-Restore and test:
-
-```powershell
-dotnet restore tests/Ai.Cli.Tests/Ai.Cli.Tests.csproj
-dotnet test tests/Ai.Cli.Tests/Ai.Cli.Tests.csproj --no-restore
-```
-
-Pack the global tool:
-
-```powershell
-dotnet pack src/Ai.Cli/Ai.Cli.csproj --no-restore
-```
-
-Install from the local package output:
-
-```powershell
-dotnet tool install --global --add-source .\src\Ai.Cli\bin\Release Ai.Cli
-```
-
-Update the global tool from this repo:
-
-```powershell
-.\scripts\update-tool.ps1
-```
-
-The update script stamps each packed build with a new numeric version so `dotnet tool update` can actually move forward. It also installs a managed PowerShell wrapper into your current-user profile and loads it into the current PowerShell session so `ai ...` prompts to execute in-place.
-
-For a first-time global install instead of an update:
-
-```powershell
-.\scripts\update-tool.ps1 -Mode Install
-```
-
-## Release
-
-Pushing a tag matching `v*` (e.g. `v1.0.0`) triggers a GitHub Actions workflow that packs the tool and publishes the NuGet package to nuget.org. The tag name (minus the `v` prefix) is used as the package version.
-
-The managed wrapper script is written to:
-
-- Windows PowerShell or `pwsh`: `%USERPROFILE%\.config\ai\powershell-wrapper.ps1`
-
-The profile integration is only installed for the default global-tool flow. If you use `-ToolPath` for a local/custom install, the wrapper is not added to your profile.
-
 ## Usage
 
-Generate a PowerShell command:
+Generate a command and run it (prompts for confirmation before executing):
 
-```powershell
+```bash
 ai list all files in the current directory, remove everything after the underscore and give me a distinct list
 ```
 
-In PowerShell, the wrapper prints the generated command and then prompts:
+The generated command is displayed, and you are prompted:
 
 ```text
 Press Enter to execute, any other key to cancel
 ```
 
-Press `Enter` to run the command in your current PowerShell session. Press any other key to abandon it. If you want the raw generate-only behavior, call `ai.exe ...` directly.
+Press `Enter` to run it, or any other key to cancel.
 
-Generate and execute a command directly (prompts for confirmation):
+Generate and execute a command directly with `-x`:
 
-```powershell
+```bash
 ai -x list all files in the current directory
 ```
 
 Generate a bash command wrapper:
 
-```powershell
+```bash
 ai --bash list all markdown files modified in the last day
 ```
 
 Ask a question without generating a command:
 
-```powershell
+```bash
 ai -q what does src/Ai.Cli/AiApplication.cs do
 ```
 
 Include files in the request context:
 
-```powershell
+```bash
 ai -q -f README.md -f src/Ai.Cli/AiApplication.cs summarize how the CLI behaves
 ```
 
@@ -144,27 +116,25 @@ ai -q -f README.md -f src/Ai.Cli/AiApplication.cs summarize how the CLI behaves
 
 List models from the configured provider:
 
-```powershell
+```bash
 ai --models
 ```
 
 Print the installed tool version:
 
-```powershell
+```bash
 ai --version
 ```
 
 Print timing information while generating a command:
 
-```powershell
+```bash
 ai --timing list all files in the current directory
 ```
 
-`--models`, `--version`, `-q` / `--question`, `-r` / `--resume`, `-hs` / `--history`, and help output pass straight through without the PowerShell execution prompt.
-
 Continue from the last history entry (multi-turn conversation):
 
-```powershell
+```bash
 ai -q why would i want to use git lfs
 ai -r i am not using github
 ai -r what about for large video assets
@@ -174,12 +144,37 @@ Each `-r` invocation chains from the previous entry so the full conversation con
 
 Search history for commands involving "dotnet":
 
-```powershell
+```bash
 ai -hs dotnet
 ```
 
 Run a command without recording it to history:
 
-```powershell
+```bash
 ai -nh list all files in the current directory
 ```
+
+## Build
+
+Restore and test:
+
+```bash
+dotnet restore tests/Ai.Cli.Tests/Ai.Cli.Tests.csproj
+dotnet test tests/Ai.Cli.Tests/Ai.Cli.Tests.csproj --no-restore
+```
+
+Pack the global tool:
+
+```bash
+dotnet pack src/Ai.Cli/Ai.Cli.csproj -c Release
+```
+
+Install from the local package output:
+
+```bash
+dotnet tool install --global --add-source ./src/Ai.Cli/bin/Release Ai.Cli
+```
+
+## Release
+
+Pushing a tag matching `v*` (e.g. `v1.0.0`) triggers a GitHub Actions workflow that packs the tool and publishes the NuGet package to nuget.org. The tag name (minus the `v` prefix) is used as the package version.
